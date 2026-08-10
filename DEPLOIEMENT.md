@@ -21,6 +21,7 @@ Coût de départ estimé : **~15-30 €/mois** (backend + Postgres sur Scalingo)
    ```
    (alias vers la variable injectée par l'addon — ne pas recopier l'URL en dur, elle change si la base est migrée).
 4. Renseigner toutes les autres variables d'environnement listées dans `backend/.env.example`, **avec des valeurs de production différentes de celles utilisées en local** (secrets JWT régénérés, vraies clés Brevo/Mistral/OVH/Yousign/Stripe/Sentry) :
+   - `PROJECT_DIR=backend` → **indispensable** : le dépôt Git contient aussi `frontend/`, cette variable dit à Scalingo de ne builder/déployer que le sous-dossier `backend/` (mécanisme officiel Scalingo pour les monorepos, pas besoin de fichier supplémentaire).
    - `NODE_ENV=production`
    - `FRONTEND_URL` → l'URL définitive du frontend (voir étape 3), pas encore connue au premier déploiement : mettre une valeur provisoire, à corriger ensuite (sert au CORS).
    - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `PLATFORM_JWT_SECRET` → générer trois valeurs aléatoires distinctes, par exemple avec `openssl rand -base64 48` dans un terminal, une par variable. Ne jamais réutiliser les valeurs de développement.
