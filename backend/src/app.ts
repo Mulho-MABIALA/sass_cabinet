@@ -37,11 +37,6 @@ export function createApp(): Express {
     res.status(200).json({ status: "ok" });
   });
 
-  // Route temporaire de vérification Sentry — à retirer une fois le test effectué.
-  app.get("/debug-sentry", () => {
-    throw new Error("Test Sentry : erreur volontaire depuis /debug-sentry");
-  });
-
   app.use("/auth", authRouter);
   app.use("/inscription", inscriptionRouter);
   app.use("/utilisateurs", utilisateursRouter);
