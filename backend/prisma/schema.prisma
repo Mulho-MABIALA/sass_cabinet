@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Secteur {
+  avocat
+  notaire
+  syndic
+  courtier
+  expert_comptable
+}
+
+enum Role {
+  admin
+  collaborateur
+}
+
+enum StatutDossier {
+  incomplet
+  en_attente_verification
+  complet
+}
+
+enum StatutDocument {
+  manquant
+  depose
+  valide
+  refuse
+}
+
+enum CanalRelance {
+  email
+  sms
+}
+
+enum StatutRelance {
+  envoyee
+  echouee
+}
+
+enum Plan {
+  starter
+  cabinet
+  premium
+}
+
+enum StatutAnonymisation {
+  actif
+  anonymise
+}
+
+enum StatutAbonnement {
+  essai
+  actif
+  impaye
+  annule
+}
+
+model Cabinet {
+  id                   String                  @id @default(uuid())
+  nom                  String
+  secteur              Secteur
+  plan                 Plan                    @default(starter)
+  // Suspension côté plateforme (super-admin) : un cabinet suspendu ne peut plus se connecter,
+  // vérifié à la connexion et au rafraîchissement de token (voir auth.service.ts)
+  actif                Boolean                 @default(true)
+  // Paiement (Stripe) — customerId créé au premier checkout, subscriptionId dès l'abonnement actif.
+  // statutAbonnement reste "essai" tant qu'aucun paiement n'a été initié (aucune restriction fonctionnelle
+  // liée à ce statut pour l'instant : c'est une donnée de suivi, pas encore un verrou d'accès).
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  statutAbonnement     StatutAbonnement        @default(essai)
+  createdAt            DateTime                @default(now())
+
+  utilisateurs  Utilisateur[]
+  typeDossiers  TypeDossier[]
+  dossiers      Dossier[]
+  usagesMensuels UsageMensuel[]
+  webhookConfigs WebhookConfig[]
+  invitations   InvitationUtilisateur[]
+
+  @@map("cabinets")
+}
+
+// Invitation d'un collaborateur/admin à rejoindre un cabinet : l'admin renseigne juste l'email et le
+// rôle, un email est envoyé avec un lien à usage unique, et c'est l'invité qui choisit lui-même son
+// mot de passe en l'acceptant (voir modules/invitations/) — remplace l'ancien flux où l'admin
+// inventait un mot de passe provisoire à transmettre à la main.
+model InvitationUtilisateur {
+  id          String    @id @default(uuid())
+  cabinetId   String
+  email       String
+  role        Role
+  token       String    @unique @default(uuid())
+  expiresAt   DateTime
+  accepteeLe  DateTime?
+  createdAt   DateTime  @default(now())
+
+  cabinet     Cabinet   @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+
+  @@index([cabinetId])
+  @@map("invitations_utilisateurs")
+}
+
+// Compte de l'opérateur de la plateforme (toi, l'éditeur du SaaS) — distinct des Utilisateur, qui
+// appartiennent tous à un Cabinet client. Authentification et JWT complètement séparés (voir
+// shared/jwt.ts et modules/platform/), pour ne jamais mélanger l'accès plateforme et l'accès cabinet.
+model PlatformAdmin {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  motDePasseHash String
+  createdAt      DateTime @default(now())
+
+  @@map("platform_admins")
+}
+
+model UsageMensuel {
+  id              String   @id @default(uuid())
+  cabinetId       String
+  annee           Int
+  mois            Int
+  dossiersTraites Int      @default(0)
+
+  cabinet         Cabinet  @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+
+  @@unique([cabinetId, annee, mois])
+  @@index([cabinetId])
+  @@map("usages_mensuels")
+}
+
+model WebhookConfig {
+  id        String   @id @default(uuid())
+  cabinetId String
+  url       String
+  evenement String
+  actif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  cabinet   Cabinet  @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+
+  @@index([cabinetId])
+  @@map("webhook_configs")
+}
+
+model Utilisateur {
+  id             String   @id @default(uuid())
+  cabinetId      String
+  email          String   @unique
+  motDePasseHash String
+  role           Role
+  createdAt      DateTime @default(now())
+
+  cabinet        Cabinet  @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  dossiers       Dossier[] @relation("CollaborateurDossiers")
+
+  @@index([cabinetId])
+  @@map("utilisateurs")
+}
+
+model TypeDossier {
+  id                String             @id @default(uuid())
+  cabinetId         String
+  nom               String
+  secteur           Secteur
+  description       String?
+
+  cabinet           Cabinet            @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  documentsRequis   DocumentRequis[]
+  dossiers          Dossier[]
+
+  @@index([cabinetId])
+  @@map("type_dossiers")
+}
+
+model DocumentRequis {
+  id            String   @id @default(uuid())
+  typeDossierId String
+  nom           String
+  description   String?
+  obligatoire   Boolean  @default(true)
+
+  typeDossier   TypeDossier       @relation(fields: [typeDossierId], references: [id], onDelete: Cascade)
+  documentsDeposes DocumentDepose[]
+
+  @@index([typeDossierId])
+  @@map("documents_requis")
+}
+
+model Dossier {
+  id                    String              @id @default(uuid())
+  cabinetId             String
+  typeDossierId         String
+  collaborateurId       String
+  nomClient             String
+  emailClient           String
+  telephoneClient       String?
+  statut                StatutDossier       @default(incomplet)
+  tokenPortail          String              @unique @default(uuid())
+  createdAt             DateTime            @default(now())
+
+  // RGPD : date à laquelle les données personnelles doivent être anonymisées
+  dateSuppressionPrevue DateTime?
+  statutAnonymisation   StatutAnonymisation @default(actif)
+  anonymiseLe           DateTime?
+
+  cabinet         Cabinet          @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  typeDossier     TypeDossier      @relation(fields: [typeDossierId], references: [id])
+  collaborateur   Utilisateur      @relation("CollaborateurDossiers", fields: [collaborateurId], references: [id])
+  documentsDeposes DocumentDepose[]
+  relances        Relance[]
+
+  @@index([cabinetId])
+  @@index([typeDossierId])
+  @@index([collaborateurId])
+  @@index([dateSuppressionPrevue])
+  @@map("dossiers")
+}
+
+model DocumentDepose {
+  id               String         @id @default(uuid())
+  dossierId        String
+  documentRequisId String
+  nomFichier       String?
+  urlStockage      String?
+  statut           StatutDocument @default(manquant)
+  dateDepot        DateTime?
+  donneesExtraites Json?
+
+  dossier          Dossier        @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+  documentRequis   DocumentRequis @relation(fields: [documentRequisId], references: [id], onDelete: Cascade)
+  anomalies        Anomalie[]
+
+  @@unique([dossierId, documentRequisId])
+  @@index([dossierId])
+  @@map("documents_deposes")
+}
+
+model Anomalie {
+  id               String         @id @default(uuid())
+  documentDeposeId String
+  type             String
+  description      String
+  createdAt        DateTime       @default(now())
+
+  documentDepose   DocumentDepose @relation(fields: [documentDeposeId], references: [id], onDelete: Cascade)
+
+  @@index([documentDeposeId])
+  @@map("anomalies")
+}
+
+model Relance {
+  id        String        @id @default(uuid())
+  dossierId String
+  dateEnvoi DateTime      @default(now())
+  canal     CanalRelance  @default(email)
+  statut    StatutRelance
+
+  dossier   Dossier       @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+
+  @@index([dossierId])
+  @@map("relances")
+}
