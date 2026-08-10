@@ -51,7 +51,7 @@ export function InvitationAccepterPage() {
     try {
       const tokens = await invitationsApi.accepter(token as string, motDePasse);
       setSession(tokens);
-      navigate("/");
+      navigate("/tableau-de-bord");
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : "Erreur lors de l'activation du compte");
     } finally {

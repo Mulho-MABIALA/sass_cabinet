@@ -41,7 +41,7 @@ export function InscriptionPage() {
     try {
       const tokens = await inscriptionApi.inscrire(parsed.data);
       setSession(tokens);
-      navigate("/");
+      navigate("/tableau-de-bord");
     } catch (error) {
       setErreur(error instanceof ApiError ? error.message : "Erreur lors de la création du cabinet");
     } finally {

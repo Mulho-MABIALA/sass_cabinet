@@ -17,10 +17,16 @@ import { EquipePage } from "./pages/admin/EquipePage";
 import { TypesDossierPage } from "./pages/admin/TypesDossierPage";
 import { PlatformLoginPage } from "./pages/platform/PlatformLoginPage";
 import { PlatformDashboardPage } from "./pages/platform/PlatformDashboardPage";
+import { LandingPage } from "./pages/marketing/LandingPage";
+import { CGUPage } from "./pages/legal/CGUPage";
+import { ConfidentialitePage } from "./pages/legal/ConfidentialitePage";
 
 export function App() {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/cgu" element={<CGUPage />} />
+      <Route path="/confidentialite" element={<ConfidentialitePage />} />
       <Route path="/connexion" element={<LoginPage />} />
       <Route path="/inscription" element={<InscriptionPage />} />
       <Route path="/portail/:token" element={<PortailClientPage />} />
@@ -34,7 +40,7 @@ export function App() {
           </AuthGuard>
         }
       >
-        <Route path="/" element={<DashboardPage />} />
+        <Route path="/tableau-de-bord" element={<DashboardPage />} />
         <Route path="/dossiers/nouveau" element={<NouveauDossierPage />} />
         <Route path="/dossiers/:id" element={<DossierDetailPage />} />
         <Route path="/facturation" element={<FacturationPage />} />

@@ -18,11 +18,11 @@ export function AppLayout() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-6">
-            <Link to="/" className="text-lg font-semibold">
+            <Link to="/tableau-de-bord" className="text-lg font-semibold">
               Dossiers Clients
             </Link>
             <nav className="flex items-center gap-4 text-sm text-slate-600">
-              <Link to="/" className="hover:text-slate-900">
+              <Link to="/tableau-de-bord" className="hover:text-slate-900">
                 Dossiers
               </Link>
               <Link to="/facturation" className="hover:text-slate-900">

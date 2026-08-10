@@ -30,7 +30,7 @@ export function LoginPage() {
     try {
       const tokens = await authApi.login(parsed.data.email, parsed.data.motDePasse);
       setSession(tokens);
-      navigate("/");
+      navigate("/tableau-de-bord");
     } catch (error) {
       setErreur(error instanceof ApiError ? error.message : "Erreur de connexion");
     } finally {

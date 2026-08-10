@@ -62,7 +62,7 @@ export function DossierDetailPage() {
   const effacementMutation = useMutation({
     mutationFn: () => dossiersApi.effacerRgpd(id as string),
     onSuccess: () => {
-      navigate("/");
+      navigate("/tableau-de-bord");
     },
     onError: (error) => {
       setMessage(error instanceof ApiError ? error.message : "Erreur lors de l'effacement RGPD");
