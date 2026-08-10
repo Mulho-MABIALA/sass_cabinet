@@ -20,7 +20,13 @@ const envSchema = z.object({
 
   SMTP_HOST: z.string().min(1),
   SMTP_PORT: z.coerce.number().default(587),
-  SMTP_SECURE: z.coerce.boolean().default(false),
+  // z.coerce.boolean() transformerait la chaîne "false" en `true` (toute chaîne non vide est truthy) :
+  // on parse explicitement la valeur textuelle pour n'accepter "true"/"false".
+  SMTP_SECURE: z
+    .enum(["true", "false"])
+    .optional()
+    .default("false")
+    .transform((value) => value === "true"),
   SMTP_USER: z.string().min(1),
   SMTP_PASSWORD: z.string().min(1),
   SMTP_FROM: z.string().min(1),
